@@ -9,6 +9,3 @@ spec:
   resources:
     requests:
       storage: 10Gi
-  # Storage class deployed in Constellation
-  # remove storage class for GKE/AKS
-  storageClassName: encrypted-storage
