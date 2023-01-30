@@ -21,14 +21,17 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"k-bench/pkg/prometheus"
-	"k-bench/util"
-	"k8s.io/client-go/dynamic"
-	"k8s.io/client-go/kubernetes"
 	"os"
 	"os/signal"
 	"path/filepath"
+	"sort"
 	"syscall"
+	"time"
+
+	"github.com/edgelesssys/k-bench/pkg/prometheus"
+	"github.com/edgelesssys/k-bench/util"
+	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/kubernetes"
 
 	log "github.com/sirupsen/logrus"
 	"k8s.io/client-go/tools/clientcmd"
@@ -37,12 +40,12 @@ import (
 	// _ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	// Uncomment the following line to load the oidc plugin (only required to authenticate with oidc to your kubernetes cluster).
 	// _ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
-	"sort"
-	"time"
 )
 
-var defaultConfig = "./config/default/config.json"
-var defaultoutDir = "."
+var (
+	defaultConfig = "./config/default/config.json"
+	defaultoutDir = "."
+)
 
 func main() {
 	var kubeconfig *string
@@ -71,7 +74,7 @@ func main() {
 	}
 
 	if fileInfo.Mode().IsDir() {
-		//get all config files under the config directory
+		// get all config files under the config directory
 		dir, error := filepath.Abs(filepath.Dir(os.Args[0]))
 		if error != nil {
 			log.Fatal(error)
@@ -95,7 +98,7 @@ func main() {
 		benchmarkConfigs = append(benchmarkConfigs, *benchmarkConfig)
 	}
 
-	file, err := os.OpenFile(filepath.Join(*outDir, "kbench.log"), os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+	file, err := os.OpenFile(filepath.Join(*outDir, "kbench.log"), os.O_RDWR|os.O_CREATE|os.O_APPEND, 0o666)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -115,7 +118,7 @@ func main() {
 	var configWithPrometheus *util.TestConfig
 
 	for _, benchmarkConfigFile := range benchmarkConfigs {
-		configFile, err := os.OpenFile(benchmarkConfigFile, os.O_RDWR, 0666)
+		configFile, err := os.OpenFile(benchmarkConfigFile, os.O_RDWR, 0o666)
 		if err != nil {
 			fmt.Printf("Can not open benchmark config file %v, benchmark exited. \n",
 				benchmarkConfigFile)
@@ -146,7 +149,7 @@ func main() {
 	if kubeerr != nil {
 		fmt.Printf("Kube config file %v not valid, benchmark exited. \n", *kubeconfig)
 		os.Exit(1)
-		//panic(err)
+		// panic(err)
 	}
 
 	if configWithPrometheus != nil {
@@ -189,7 +192,7 @@ func main() {
 		os.Exit(1)
 	}()
 
-	//Run each workload(specified by its config file) one after another in the sorted order
+	// Run each workload(specified by its config file) one after another in the sorted order
 	for _, testConfig := range testConfigs {
 		fmt.Printf("Running workload, please check kbench log for details... \n")
 		util.Run(config, testConfig, outDir)

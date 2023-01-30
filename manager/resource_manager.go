@@ -18,22 +18,24 @@ package manager
 
 import (
 	"fmt"
-	v1 "k8s.io/api/rbac/v1"
-	"k8s.io/apimachinery/pkg/api/meta"
-	"k8s.io/client-go/dynamic"
 	"sort"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
+	v1 "k8s.io/api/rbac/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
+	"k8s.io/client-go/dynamic"
+
 	log "github.com/sirupsen/logrus"
-	//appsv1 "k8s.io/api/apps/v1"
+	// appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	restclient "k8s.io/client-go/rest"
+
 	//"k8s.io/apimachinery/pkg/fields"
-	"k-bench/perf_util"
+	"github.com/edgelesssys/k-bench/perf_util"
 	"k8s.io/client-go/kubernetes"
 )
 
@@ -288,7 +290,6 @@ func (mgr *ResourceManager) Create(spec interface{}) error {
  * This function implements the LIST action.
  */
 func (mgr *ResourceManager) List(n interface{}) error {
-
 	var kind string
 	ns := mgr.namespace
 
@@ -736,7 +737,7 @@ func (mgr *ResourceManager) DeleteAll() error {
 	}
 
 	// Delete other non default namespaces
-	for ns, _ := range mgr.nsSet {
+	for ns := range mgr.nsSet {
 		if ns != apiv1.NamespaceDefault {
 			mgr.client.CoreV1().Namespaces().Delete(ns, nil)
 		}
@@ -750,12 +751,11 @@ func (mgr *ResourceManager) DeleteAll() error {
  * This function computes all the metrics and stores the results into the log file.
  */
 func (mgr *ResourceManager) LogStats() {
-
 	log.Infof("----------------------------- Resource API Call Latencies (ms) " +
 		"-----------------------------")
 	log.Infof("%-50v %-10v %-10v %-10v %-10v", " ", "median", "min", "max", "99%")
-	for k, _ := range mgr.apiTimes {
-		for m, _ := range mgr.apiTimes[k] {
+	for k := range mgr.apiTimes {
+		for m := range mgr.apiTimes[k] {
 			sort.Slice(mgr.apiTimes[k][m],
 				func(i, j int) bool { return mgr.apiTimes[k][m][i] < mgr.apiTimes[k][m][j] })
 			mid := float32(mgr.apiTimes[k][m][len(mgr.apiTimes[k][m])/2]) / float32(time.Millisecond)
@@ -775,21 +775,29 @@ func (mgr *ResourceManager) GetResourceName(opNum int, tid int, kind string) str
 
 func (mgr *ResourceManager) SendMetricToWavefront(now time.Time, wfTags []perf_util.WavefrontTag, wavefrontPathDir string, prefix string) {
 	var points []perf_util.WavefrontDataPoint
-	for k, _ := range mgr.apiTimes {
-		for m, _ := range mgr.apiTimes[k] {
+	for k := range mgr.apiTimes {
+		for m := range mgr.apiTimes[k] {
 			mid := float32(mgr.apiTimes[k][m][len(mgr.apiTimes[k][m])/2]) / float32(time.Millisecond)
 			min := float32(mgr.apiTimes[k][m][0]) / float32(time.Millisecond)
 			max := float32(mgr.apiTimes[k][m][len(mgr.apiTimes[k][m])-1]) / float32(time.Millisecond)
 			p99 := float32(mgr.apiTimes[k][m][len(mgr.apiTimes[k][m])-1-len(mgr.apiTimes[k][m])/100]) /
 				float32(time.Millisecond)
-			points = append(points, perf_util.WavefrontDataPoint{"resource.apicall." + m + ".median.latency",
-				mid, now, mgr.source, wfTags})
-			points = append(points, perf_util.WavefrontDataPoint{"resource.apicall." + m + ".min.latency",
-				min, now, mgr.source, wfTags})
-			points = append(points, perf_util.WavefrontDataPoint{"resource.apicall." + m + ".max.latency",
-				max, now, mgr.source, wfTags})
-			points = append(points, perf_util.WavefrontDataPoint{"resource.apicall." + m + ".p99.latency",
-				p99, now, mgr.source, wfTags})
+			points = append(points, perf_util.WavefrontDataPoint{
+				"resource.apicall." + m + ".median.latency",
+				mid, now, mgr.source, wfTags,
+			})
+			points = append(points, perf_util.WavefrontDataPoint{
+				"resource.apicall." + m + ".min.latency",
+				min, now, mgr.source, wfTags,
+			})
+			points = append(points, perf_util.WavefrontDataPoint{
+				"resource.apicall." + m + ".max.latency",
+				max, now, mgr.source, wfTags,
+			})
+			points = append(points, perf_util.WavefrontDataPoint{
+				"resource.apicall." + m + ".p99.latency",
+				p99, now, mgr.source, wfTags,
+			})
 
 		}
 	}

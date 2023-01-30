@@ -17,14 +17,15 @@ limitations under the License.
 package prometheus
 
 import (
-	log "github.com/sirupsen/logrus"
-	"k-bench/util"
-	"k8s.io/client-go/dynamic"
-	"k8s.io/client-go/kubernetes"
-	restclient "k8s.io/client-go/rest"
 	"os/exec"
 	"strings"
 	"time"
+
+	"github.com/edgelesssys/k-bench/util"
+	log "github.com/sirupsen/logrus"
+	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/kubernetes"
+	restclient "k8s.io/client-go/rest"
 )
 
 /*
@@ -43,7 +44,8 @@ type PrometheusController struct {
 
 func NewPrometheusController(c *kubernetes.Clientset,
 	dc *dynamic.Interface, kc *restclient.Config,
-	tc *util.TestConfig) PrometheusController {
+	tc *util.TestConfig,
+) PrometheusController {
 	return PrometheusController{
 		client:     c,
 		dynClient:  dc,
@@ -60,8 +62,10 @@ func (controller *PrometheusController) EnablePrometheus() {
 	manifests := controller.testConfig.PrometheusManifestPaths
 	log.Info("Setting up Prometheus on the cluster...")
 
-	prometheusPred := util.PredicateSpec{Command: "kubectl get pods --all-namespaces",
-		Expect: "!contains:prometheus"}
+	prometheusPred := util.PredicateSpec{
+		Command: "kubectl get pods --all-namespaces",
+		Expect:  "!contains:prometheus",
+	}
 	noPrometheus := util.HandlePredicate(controller.client, *controller.dynClient,
 		controller.kubeConfig, prometheusPred, 1000, 2000)
 

@@ -19,11 +19,15 @@ package util
 import (
 	"bytes"
 	"io/ioutil"
-	"k-bench/manager"
+	"os"
+	"os/exec"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/edgelesssys/k-bench/manager"
 
 	"k8s.io/client-go/dynamic"
 
@@ -35,10 +39,7 @@ import (
 	//"k8s.io/client-go/tools/clientcmd"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 
-	"k-bench/perf_util"
-	"os"
-	"os/exec"
-	"path/filepath"
+	"github.com/edgelesssys/k-bench/perf_util"
 )
 
 const (
@@ -60,10 +61,12 @@ const (
 	resType string = "kbench-resource"
 )
 
-const routinesPerClient int = 4
-const defaultInterval int = 3000
-const defaultTimeout int = 180000
-const successRateThreshold int = 90
+const (
+	routinesPerClient    int = 4
+	defaultInterval      int = 3000
+	defaultTimeout       int = 180000
+	successRateThreshold int = 90
+)
 
 var wg sync.WaitGroup
 
@@ -74,14 +77,14 @@ var outDir *string
 var mgrs map[string]manager.Manager
 
 func Run(kubeConfig *restclient.Config,
-	testConfig TestConfig, outputDir *string) error {
-
+	testConfig TestConfig, outputDir *string,
+) error {
 	outDir = outputDir
 	wcpOps := testConfig.Operations
 	dockerCompose := testConfig.DockerCompose
 
 	if dockerCompose != "" {
-		//var spec *extv1beta1.Deployment
+		// var spec *extv1beta1.Deployment
 		log.Info("find docker compose file")
 		docker_compose_file := dockerCompose
 
@@ -95,7 +98,7 @@ func Run(kubeConfig *restclient.Config,
 			if start >= 0 && end >= 0 && end > start {
 				convertedYamlFile := line[start:end]
 				log.Info("Found converted file: " + convertedYamlFile)
-				//move config file into config folder
+				// move config file into config folder
 				yamlSpec := "./config/" + convertedYamlFile
 				err = os.Rename(convertedYamlFile, yamlSpec)
 				if err != nil {
@@ -110,14 +113,14 @@ func Run(kubeConfig *restclient.Config,
 					}
 
 					lines := strings.Split(string(input), "\n")
-					//Replace the apiVersion if it is not v1
+					// Replace the apiVersion if it is not v1
 					for i, line := range lines {
 						if strings.Contains(line, "extensions/v1beta1") {
 							lines[i] = "apiVersion: apps/v1"
 						}
 					}
 					output := strings.Join(lines, "\n")
-					err = ioutil.WriteFile(yamlSpec, []byte(output), 0644)
+					err = ioutil.WriteFile(yamlSpec, []byte(output), 0o644)
 					if err != nil {
 						log.Fatalln(err)
 					}
@@ -242,7 +245,7 @@ func Run(kubeConfig *restclient.Config,
 			checkAndRunResource(kubeConfig, op, opIdx, maxClients)
 
 			log.Infof("Waiting all threads to finish on the current operation")
-			//time.Sleep(time.Duration(op.SleepTime) * time.Millisecond)
+			// time.Sleep(time.Duration(op.SleepTime) * time.Millisecond)
 
 			wg.Wait()
 

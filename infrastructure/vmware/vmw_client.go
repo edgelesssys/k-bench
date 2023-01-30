@@ -38,8 +38,8 @@ const (
 func validateCluster(name string,
 	vcip string,
 	client *http.Client,
-	ck *http.Cookie) (string, bool, bool) {
-
+	ck *http.Cookie,
+) (string, bool, bool) {
 	url := "https://" + vcip + CLUSTER_INFO_URI
 	clusterReq, _ := http.NewRequest("GET", url, nil)
 	clusterReq.AddCookie(ck)
@@ -72,7 +72,7 @@ func validateCluster(name string,
 
 				wcpRes, we := client.Do(wcpReq)
 				if we != nil {
-					log.Errorf("Failed to retrieve wcp info for the cluster, "+
+					log.Error("Failed to retrieve wcp info for the cluster, "+
 						"treating as wcp not enabled. Error:", we)
 					return cls.Id, true, false
 				}
@@ -98,8 +98,8 @@ func validateCluster(name string,
 func getDatastoreId(name string,
 	vcip string,
 	client *http.Client,
-	ck *http.Cookie) string {
-
+	ck *http.Cookie,
+) string {
 	url := "https://" + vcip + DATASTORE_INFO_URI
 	req, _ := http.NewRequest("GET", url, nil)
 	req.AddCookie(ck)
@@ -133,8 +133,8 @@ func getDatastoreId(name string,
 func getNetworkId(name string,
 	vcip string,
 	client *http.Client,
-	ck *http.Cookie) string {
-
+	ck *http.Cookie,
+) string {
 	url := "https://" + vcip + NETWORK_INFO_URI
 	req, _ := http.NewRequest("GET", url, nil)
 	req.AddCookie(ck)
@@ -306,5 +306,4 @@ func EnableWcp(cfg VsphereConfig) bool {
 	}
 
 	return false
-
 }

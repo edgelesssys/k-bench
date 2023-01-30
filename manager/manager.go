@@ -20,14 +20,16 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
+
 	//"k8s.io/client-go/kubernetes"
-	"k-bench/perf_util"
-	"time"
+
+	"github.com/edgelesssys/k-bench/perf_util"
 )
 
 // Supported actions

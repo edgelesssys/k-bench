@@ -18,6 +18,10 @@ package util
 
 import (
 	"bytes"
+	"os/exec"
+	"strings"
+	"time"
+
 	log "github.com/sirupsen/logrus"
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -31,9 +35,6 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	restclient "k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/remotecommand"
-	"os/exec"
-	"strings"
-	"time"
 )
 
 func HandlePredicate(
@@ -42,7 +43,8 @@ func HandlePredicate(
 	config *restclient.Config,
 	ps PredicateSpec,
 	interval int,
-	timeout int) bool {
+	timeout int,
+) bool {
 	totalWait := 0
 	for totalWait < timeout {
 		ok := checkPredicateOk(clientset, client, config, ps)
@@ -63,8 +65,8 @@ func HandlePredicate(
 func checkPredicateOk(clientset *kubernetes.Clientset,
 	client dynamic.Interface,
 	config *restclient.Config,
-	ps PredicateSpec) bool {
-
+	ps PredicateSpec,
+) bool {
 	gvk, ns, resName, cName := getResourceInfo(ps)
 	if (gvk == nil || ns == "") && ps.Command == "" {
 		log.Warnf("No valid predicate found, proceed...")
@@ -150,7 +152,7 @@ func runCmdPredicate(command string, expect string) bool {
 	}
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		log.Errorf("Error running predicate command %v, predicate ignored. Error: ", command, err)
+		log.Errorf("Error running predicate command %v, predicate ignored. Error: %v", command, err)
 		return true
 	}
 	outStr := string(out)
@@ -192,7 +194,8 @@ func runCmdInContainerPredicate(
 	config *restclient.Config,
 	command string, expect string,
 	ns string, podName string,
-	container *apiv1.Container) bool {
+	container *apiv1.Container,
+) bool {
 	cmdarr := strings.Split(command, " ")
 	runrequest := client.CoreV1().RESTClient().Post().
 		Resource("pods").
@@ -212,7 +215,7 @@ func runCmdInContainerPredicate(
 	exec, err := remotecommand.NewSPDYExecutor(config,
 		"POST", runrequest.URL())
 	if err != nil {
-		log.Errorf("Error running predicate command %v in container, predicate ignored.", command, err)
+		log.Errorf("Error running predicate command %v in container, predicate ignored. %v", command, err)
 		return true
 	}
 
