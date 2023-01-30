@@ -17,9 +17,14 @@ limitations under the License.
 package util
 
 import (
-	log "github.com/sirupsen/logrus"
 	"io/ioutil"
-	"k-bench/manager"
+	"reflect"
+	"strconv"
+	"strings"
+	"time"
+
+	"github.com/edgelesssys/k-bench/manager"
+	log "github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -29,17 +34,14 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	restclient "k8s.io/client-go/rest"
-	"reflect"
-	"strconv"
-	"strings"
-	"time"
 )
 
 func checkAndRunPod(
 	kubeConfig *restclient.Config,
 	op WcpOp,
 	opIdx int,
-	maxClients map[string]int) string {
+	maxClients map[string]int,
+) string {
 	if len(op.Pod.Actions) > 0 {
 
 		var podMgr *manager.PodManager
@@ -69,7 +71,8 @@ func checkAndRunDeployment(
 	kubeConfig *restclient.Config,
 	op WcpOp,
 	opIdx int,
-	maxClients map[string]int) string {
+	maxClients map[string]int,
+) string {
 	if len(op.Deployment.Actions) > 0 {
 
 		var depMgr *manager.DeploymentManager
@@ -99,7 +102,8 @@ func checkAndRunStatefulSet(
 	kubeConfig *restclient.Config,
 	op WcpOp,
 	opIdx int,
-	maxClients map[string]int) string {
+	maxClients map[string]int,
+) string {
 	if len(op.StatefulSet.Actions) > 0 {
 
 		var ssMgr *manager.StatefulSetManager
@@ -129,7 +133,8 @@ func checkAndRunNamespace(
 	kubeConfig *restclient.Config,
 	op WcpOp,
 	opIdx int,
-	maxClients map[string]int) {
+	maxClients map[string]int,
+) {
 	if op.Namespace.Count != 0 && len(op.Namespace.Actions) > 0 {
 
 		var nsMgr *manager.NamespaceManager
@@ -144,7 +149,7 @@ func checkAndRunNamespace(
 
 		log.Infof("Performing namespace actions in operation %v", opIdx)
 
-		//wg.Add(op.Namespace.Count)
+		// wg.Add(op.Namespace.Count)
 
 		for i := 0; i < op.Namespace.Count; i++ {
 			go runNamespaceActions(nsMgr, op.Namespace, opIdx, i)
@@ -157,7 +162,8 @@ func checkAndRunService(
 	kubeConfig *restclient.Config,
 	op WcpOp,
 	opIdx int,
-	maxClients map[string]int) {
+	maxClients map[string]int,
+) {
 	if op.Service.Count != 0 && len(op.Service.Actions) > 0 {
 
 		var svcMgr *manager.ServiceManager
@@ -183,7 +189,8 @@ func checkAndRunRc(
 	kubeConfig *restclient.Config,
 	op WcpOp,
 	opIdx int,
-	maxClients map[string]int) string {
+	maxClients map[string]int,
+) string {
 	if len(op.ReplicationController.Actions) > 0 {
 
 		var rcMgr *manager.ReplicationControllerManager
@@ -215,8 +222,8 @@ func checkAndRunResource(
 	kubeConfig *restclient.Config,
 	op WcpOp,
 	opIdx int,
-	maxClients map[string]int) {
-
+	maxClients map[string]int,
+) {
 	resourceOps := reflect.ValueOf(op)
 	typeOps := resourceOps.Type()
 
@@ -279,7 +286,8 @@ func updateLabels(
 	labels map[string]string,
 	resType string,
 	opNum int,
-	tid int) {
+	tid int,
+) {
 	labels["app"] = manager.AppName
 	labels["type"] = resType
 	labels["opnum"] = strconv.Itoa(opNum)
@@ -293,8 +301,8 @@ func updateLabelNs(
 	vfromconfig string,
 	ns *string,
 	lk *string,
-	lv *string) {
-
+	lv *string,
+) {
 	if spec.Namespace != "" {
 		*ns = spec.Namespace
 	}
@@ -312,8 +320,8 @@ func runPodActions(
 	mgr *manager.PodManager,
 	podConfig PodConfig,
 	opNum int,
-	tid int) {
-
+	tid int,
+) {
 	// Get default pod name (used when filtering not specified or applicable)
 	podName := mgr.GetResourceName(podConfig.PodNamePrefix, opNum, tid)
 
@@ -357,8 +365,10 @@ func runPodActions(
 			}
 
 			if spec == nil {
-				as := manager.ActionSpec{podName, tid, opNum, ns,
-					lk, lv, true, "", manager.POD}
+				as := manager.ActionSpec{
+					podName, tid, opNum, ns,
+					lk, lv, true, "", manager.POD,
+				}
 
 				if createSpec.ImagePullPolicy == "Always" {
 					spec = genPodSpec(createSpec.Image, podConfig.ContainerNamePrefix,
@@ -406,7 +416,8 @@ func runPodActions(
 
 			as := manager.ActionSpec{
 				podName, tid, opNum, ns, lk, lv,
-				runSpec.MatchGoroutine, runSpec.MatchOperation, manager.POD}
+				runSpec.MatchGoroutine, runSpec.MatchOperation, manager.POD,
+			}
 			ae := mgr.ActionFuncs[manager.RUN_ACTION](mgr,
 				manager.RunSpec{runSpec.Command, as})
 			if ae != nil {
@@ -418,13 +429,15 @@ func runPodActions(
 
 			as := manager.ActionSpec{
 				podName, tid, opNum, ns, lk, lv,
-				copySpec.MatchGoroutine, copySpec.MatchOperation, manager.POD}
+				copySpec.MatchGoroutine, copySpec.MatchOperation, manager.POD,
+			}
 			ae := mgr.ActionFuncs[manager.COPY_ACTION](mgr,
 				manager.CopySpec{
 					*outDir,
 					copySpec.LocalPath,
 					copySpec.ContainerPath,
-					copySpec.Upload, as})
+					copySpec.Upload, as,
+				})
 			if ae != nil {
 				log.Error(ae)
 			}
@@ -434,7 +447,8 @@ func runPodActions(
 
 			as := manager.ActionSpec{
 				podName, tid, opNum, ns, lk, lv,
-				lusdSpec.MatchGoroutine, lusdSpec.MatchOperation, manager.POD}
+				lusdSpec.MatchGoroutine, lusdSpec.MatchOperation, manager.POD,
+			}
 			ae := actionFunc(mgr, as)
 
 			if ae != nil {
@@ -458,8 +472,8 @@ func runDeploymentActions(
 	mgr *manager.DeploymentManager,
 	depConfig DeploymentConfig,
 	opNum int,
-	tid int) {
-
+	tid int,
+) {
 	// Get default deployment name (used when labels/selectors not specified or applicable)
 	depName := mgr.GetResourceName(opNum, tid)
 
@@ -503,8 +517,10 @@ func runDeploymentActions(
 			}
 
 			if spec == nil {
-				as := manager.ActionSpec{depName, tid, opNum, ns, lk,
-					lv, true, "", manager.DEPLOYMENT}
+				as := manager.ActionSpec{
+					depName, tid, opNum, ns, lk,
+					lv, true, "", manager.DEPLOYMENT,
+				}
 
 				if createSpec.ImagePullPolicy == "Always" {
 					spec = genDeploymentSpec(createSpec.Image,
@@ -532,7 +548,8 @@ func runDeploymentActions(
 				// Selector is mandatory for apps v1 deployment spec
 				if spec.Spec.Selector == nil {
 					spec.Spec.Selector = &metav1.LabelSelector{
-						MatchLabels: make(map[string]string, 0)}
+						MatchLabels: make(map[string]string, 0),
+					}
 				}
 
 				updateLabels(spec.Spec.Selector.MatchLabels, depType, opNum, tid)
@@ -568,7 +585,8 @@ func runDeploymentActions(
 
 			as := manager.ActionSpec{
 				depName, tid, opNum, ns, lk, lv,
-				lusdSpec.MatchGoroutine, lusdSpec.MatchOperation, manager.DEPLOYMENT}
+				lusdSpec.MatchGoroutine, lusdSpec.MatchOperation, manager.DEPLOYMENT,
+			}
 			ae := actionFunc(mgr, as)
 
 			if ae != nil {
@@ -591,8 +609,8 @@ func runStatefulSetActions(
 	mgr *manager.StatefulSetManager,
 	ssConfig StatefulSetConfig,
 	opNum int,
-	tid int) {
-
+	tid int,
+) {
 	// Get default statefulset name (used when labels/selectors not specified or applicable)
 	ssName := mgr.GetResourceName(opNum, tid)
 
@@ -636,8 +654,10 @@ func runStatefulSetActions(
 			}
 
 			if spec == nil {
-				as := manager.ActionSpec{ssName, tid, opNum, ns, lk,
-					lv, true, "", manager.STATEFUL_SET}
+				as := manager.ActionSpec{
+					ssName, tid, opNum, ns, lk,
+					lv, true, "", manager.STATEFUL_SET,
+				}
 
 				if createSpec.ImagePullPolicy == "Always" {
 					spec = genStatefulSetSpec(createSpec.Image,
@@ -665,7 +685,8 @@ func runStatefulSetActions(
 				// Selector is mandatory for apps v1 deployment spec
 				if spec.Spec.Selector == nil {
 					spec.Spec.Selector = &metav1.LabelSelector{
-						MatchLabels: make(map[string]string, 0)}
+						MatchLabels: make(map[string]string, 0),
+					}
 				}
 
 				updateLabels(spec.Spec.Selector.MatchLabels, ssType, opNum, tid)
@@ -701,7 +722,8 @@ func runStatefulSetActions(
 
 			as := manager.ActionSpec{
 				ssName, tid, opNum, ns, lk, lv,
-				lusdSpec.MatchGoroutine, lusdSpec.MatchOperation, manager.STATEFUL_SET}
+				lusdSpec.MatchGoroutine, lusdSpec.MatchOperation, manager.STATEFUL_SET,
+			}
 			ae := actionFunc(mgr, as)
 
 			if ae != nil {
@@ -724,8 +746,8 @@ func runNamespaceActions(
 	mgr *manager.NamespaceManager,
 	nsConfig NamespaceConfig,
 	opNum int,
-	tid int) {
-
+	tid int,
+) {
 	nsName := mgr.GetResourceName(opNum, tid)
 
 	actions := nsConfig.Actions
@@ -778,7 +800,8 @@ func runNamespaceActions(
 			lusdSpec := action.Spec
 			as := manager.ActionSpec{
 				nsName, tid, opNum, nsName, lk, lv,
-				lusdSpec.MatchGoroutine, lusdSpec.MatchOperation, manager.NAMESPACE}
+				lusdSpec.MatchGoroutine, lusdSpec.MatchOperation, manager.NAMESPACE,
+			}
 			ae := actionFunc(mgr, as)
 
 			if ae != nil {
@@ -802,8 +825,8 @@ func runServiceActions(
 	mgr *manager.ServiceManager,
 	svcConfig ServiceConfig,
 	opNum int,
-	tid int) {
-
+	tid int,
+) {
 	svcName := mgr.GetResourceName(opNum, tid)
 
 	actions := svcConfig.Actions
@@ -846,8 +869,10 @@ func runServiceActions(
 			}
 
 			if spec == nil {
-				as := manager.ActionSpec{svcName, tid, opNum, ns, lk,
-					lv, true, "", manager.SERVICE}
+				as := manager.ActionSpec{
+					svcName, tid, opNum, ns, lk,
+					lv, true, "", manager.SERVICE,
+				}
 				spec = genServiceSpec(opNum, as)
 			} else {
 				// Name from yaml file are not respected to ensure integrity.
@@ -887,7 +912,8 @@ func runServiceActions(
 
 			as := manager.ActionSpec{
 				svcName, tid, opNum, ns, lk, lv,
-				lusdSpec.MatchGoroutine, lusdSpec.MatchOperation, manager.SERVICE}
+				lusdSpec.MatchGoroutine, lusdSpec.MatchOperation, manager.SERVICE,
+			}
 			ae := actionFunc(mgr, as)
 
 			if ae != nil {
@@ -911,8 +937,8 @@ func runRcActions(
 	mgr *manager.ReplicationControllerManager,
 	rcConfig ReplicationControllerConfig,
 	opNum int,
-	tid int) {
-
+	tid int,
+) {
 	rcName := mgr.GetResourceName(opNum, tid)
 
 	actions := rcConfig.Actions
@@ -955,8 +981,10 @@ func runRcActions(
 			}
 
 			if spec == nil {
-				as := manager.ActionSpec{rcName, tid, opNum, ns, lk,
-					lv, true, "", manager.REPLICATION_CONTROLLER}
+				as := manager.ActionSpec{
+					rcName, tid, opNum, ns, lk,
+					lv, true, "", manager.REPLICATION_CONTROLLER,
+				}
 				if createSpec.ImagePullPolicy == "Always" {
 					spec = genRcSpec(createSpec.Image, createSpec.NumReplicas,
 						apiv1.PullAlways, opNum, as)
@@ -1012,7 +1040,8 @@ func runRcActions(
 
 			as := manager.ActionSpec{
 				rcName, tid, opNum, ns, lk, lv,
-				lusdSpec.MatchGoroutine, lusdSpec.MatchOperation, manager.REPLICATION_CONTROLLER}
+				lusdSpec.MatchGoroutine, lusdSpec.MatchOperation, manager.REPLICATION_CONTROLLER,
+			}
 
 			ae := actionFunc(mgr, as)
 
@@ -1038,8 +1067,8 @@ func runResourceActions(
 	resConfig ResourceConfig,
 	opNum int,
 	tid int,
-	kind string) {
-
+	kind string,
+) {
 	resName := mgr.GetResourceName(opNum, tid, kind)
 
 	actions := resConfig.Actions
@@ -1067,7 +1096,7 @@ func runResourceActions(
 				created = true
 			}
 
-			//var spec *runtime.Object
+			// var spec *runtime.Object
 			createSpec := action.Spec
 			updateLabelNs(createSpec, resConfig.LabelKey, resConfig.LabelValue, &ns, &lk, &lv)
 
@@ -1109,7 +1138,8 @@ func runResourceActions(
 
 			as := manager.ActionSpec{
 				resName, tid, opNum, ns, lk, lv,
-				lusdSpec.MatchGoroutine, lusdSpec.MatchOperation, kind}
+				lusdSpec.MatchGoroutine, lusdSpec.MatchOperation, kind,
+			}
 			ae := actionFunc(mgr, as)
 
 			if ae != nil {
@@ -1136,8 +1166,8 @@ func waitForPodRelatedOps(
 	lastAction string,
 	timeout int,
 	interval int,
-	opIdx int) int {
-
+	opIdx int,
+) int {
 	totalWait := 0
 	var t string
 	if resKind == manager.POD {
@@ -1179,7 +1209,8 @@ func waitForPodRelatedOps(
 					"%v remaining, force delete...",
 					resKind, len(pods.Items))
 				driverClient.CoreV1().Pods(pods.Items[0].Namespace).DeleteCollection(&metav1.DeleteOptions{
-					GracePeriodSeconds: &gp, PropagationPolicy: &fg}, options)
+					GracePeriodSeconds: &gp, PropagationPolicy: &fg,
+				}, options)
 			}
 		}
 	} else if mgr, ok := mgrs[resKind]; ok {

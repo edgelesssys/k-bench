@@ -24,12 +24,13 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
-	//appsv1 "k8s.io/api/apps/v1"
+	// appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	restclient "k8s.io/client-go/rest"
+
 	//"k8s.io/apimachinery/pkg/fields"
-	"k-bench/perf_util"
+	"github.com/edgelesssys/k-bench/perf_util"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/kubernetes"
 )
@@ -83,10 +84,8 @@ func (mgr *NamespaceManager) Init(
 	nsName string,
 	maxClients int,
 ) {
-
 	mgr.source = perf_util.GetHostnameFromUrl(kubeConfig.Host)
 	sharedClient, err := kubernetes.NewForConfig(kubeConfig)
-
 	if err != nil {
 		panic(err)
 	}
@@ -110,7 +109,6 @@ func (mgr *NamespaceManager) Init(
  * This function implements the CREATE action.
  */
 func (mgr *NamespaceManager) Create(spec interface{}) error {
-
 	switch s := spec.(type) {
 	default:
 		log.Errorf("Invalid spec type %T for Namespace create action.", s)
@@ -138,7 +136,6 @@ func (mgr *NamespaceManager) Create(spec interface{}) error {
  * This function implements the LIST action.
  */
 func (mgr *NamespaceManager) List(n interface{}) error {
-
 	switch s := n.(type) {
 	default:
 		log.Errorf("Invalid spec type %T for Namespace list action.", s)
@@ -169,7 +166,6 @@ func (mgr *NamespaceManager) List(n interface{}) error {
  * This function implements the GET action.
  */
 func (mgr *NamespaceManager) Get(n interface{}) error {
-
 	switch s := n.(type) {
 	default:
 		log.Errorf("Invalid spec type %T for Namespace get action.", s)
@@ -198,7 +194,6 @@ func (mgr *NamespaceManager) Get(n interface{}) error {
  * This function implements the UPDATE action.
  */
 func (mgr *NamespaceManager) Update(n interface{}) error {
-
 	switch s := n.(type) {
 	default:
 		log.Errorf("Invalid spec type %T for Namespace update action.", s)
@@ -272,11 +267,9 @@ func (mgr *NamespaceManager) Delete(n interface{}) error {
  * all the resources that are created by the namespace manager.
  */
 func (mgr *NamespaceManager) DeleteAll() error {
-
 	options := metav1.ListOptions{LabelSelector: labels.SelectorFromSet(
 		labels.Set{"app": AppName}).String()}
 	nss, err := mgr.client.CoreV1().Namespaces().List(options)
-
 	if err != nil {
 		return err
 	}
@@ -286,7 +279,8 @@ func (mgr *NamespaceManager) DeleteAll() error {
 		for _, ns := range nss.Items {
 			mgr.Delete(ActionSpec{
 				Name: ns.Name,
-				Tid:  0})
+				Tid:  0,
+			})
 		}
 	} else {
 		log.Infof("Found no namespaces to delete, maybe they have already been deleted.")
@@ -307,12 +301,11 @@ func (mgr *NamespaceManager) IsStable() bool {
  * This function computes all the metrics and stores the results into the log file.
  */
 func (mgr *NamespaceManager) LogStats() {
-
 	log.Infof("----------------------------- Namespace API Call Latencies (ms) " +
 		"-----------------------------")
 	log.Infof("%-50v %-10v %-10v %-10v %-10v", " ", "median", "min", "max", "99%")
 
-	for m, _ := range mgr.apiTimes {
+	for m := range mgr.apiTimes {
 		sort.Slice(mgr.apiTimes[m],
 			func(i, j int) bool { return mgr.apiTimes[m][i] < mgr.apiTimes[m][j] })
 		mid := float32(mgr.apiTimes[m][len(mgr.apiTimes[m])/2]) / float32(time.Millisecond)
@@ -331,20 +324,28 @@ func (mgr *NamespaceManager) GetResourceName(opNum int, tid int) string {
 
 func (mgr *NamespaceManager) SendMetricToWavefront(now time.Time, wfTags []perf_util.WavefrontTag, wavefrontPathDir string, prefix string) {
 	var points []perf_util.WavefrontDataPoint
-	for m, _ := range mgr.apiTimes {
+	for m := range mgr.apiTimes {
 		mid := float32(mgr.apiTimes[m][len(mgr.apiTimes[m])/2]) / float32(time.Millisecond)
 		min := float32(mgr.apiTimes[m][0]) / float32(time.Millisecond)
 		max := float32(mgr.apiTimes[m][len(mgr.apiTimes[m])-1]) / float32(time.Millisecond)
 		p99 := float32(mgr.apiTimes[m][len(mgr.apiTimes[m])-1-len(mgr.apiTimes[m])/100]) /
 			float32(time.Millisecond)
-		points = append(points, perf_util.WavefrontDataPoint{"namespace.apicall." + m + ".median.latency",
-			mid, now, mgr.source, wfTags})
-		points = append(points, perf_util.WavefrontDataPoint{"namespace.apicall." + m + ".min.latency",
-			min, now, mgr.source, wfTags})
-		points = append(points, perf_util.WavefrontDataPoint{"namespace.apicall." + m + ".max.latency",
-			max, now, mgr.source, wfTags})
-		points = append(points, perf_util.WavefrontDataPoint{"namespace.apicall." + m + ".p99.latency",
-			p99, now, mgr.source, wfTags})
+		points = append(points, perf_util.WavefrontDataPoint{
+			"namespace.apicall." + m + ".median.latency",
+			mid, now, mgr.source, wfTags,
+		})
+		points = append(points, perf_util.WavefrontDataPoint{
+			"namespace.apicall." + m + ".min.latency",
+			min, now, mgr.source, wfTags,
+		})
+		points = append(points, perf_util.WavefrontDataPoint{
+			"namespace.apicall." + m + ".max.latency",
+			max, now, mgr.source, wfTags,
+		})
+		points = append(points, perf_util.WavefrontDataPoint{
+			"namespace.apicall." + m + ".p99.latency",
+			p99, now, mgr.source, wfTags,
+		})
 
 	}
 	var metricLines []string

@@ -17,8 +17,9 @@ limitations under the License.
 package util
 
 import (
-	"k-bench/manager"
 	"strconv"
+
+	"github.com/edgelesssys/k-bench/manager"
 
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
@@ -29,7 +30,8 @@ func genPodSpec(image string,
 	containerPrefix string,
 	ipp apiv1.PullPolicy,
 	on int,
-	as manager.ActionSpec) *apiv1.Pod {
+	as manager.ActionSpec,
+) *apiv1.Pod {
 	labels := map[string]string{
 		"app":   manager.AppName,
 		"type":  podType,
@@ -70,8 +72,8 @@ func genDeploymentSpec(image string,
 	replica int32,
 	ipp apiv1.PullPolicy,
 	on int,
-	as manager.ActionSpec) *appsv1.Deployment {
-
+	as manager.ActionSpec,
+) *appsv1.Deployment {
 	labels := map[string]string{
 		"app":   manager.AppName,
 		"type":  depType,
@@ -84,7 +86,7 @@ func genDeploymentSpec(image string,
 
 	podSpec := apiv1.PodTemplateSpec{
 		ObjectMeta: metav1.ObjectMeta{
-			//Name: name,
+			// Name: name,
 			Namespace: as.Namespace,
 			Labels:    labels,
 		},
@@ -134,8 +136,8 @@ func genStatefulSetSpec(image string,
 	replica int32,
 	ipp apiv1.PullPolicy,
 	on int,
-	as manager.ActionSpec) *appsv1.StatefulSet {
-
+	as manager.ActionSpec,
+) *appsv1.StatefulSet {
 	labels := map[string]string{
 		"app":   manager.AppName,
 		"type":  ssType,
@@ -148,7 +150,7 @@ func genStatefulSetSpec(image string,
 
 	podSpec := apiv1.PodTemplateSpec{
 		ObjectMeta: metav1.ObjectMeta{
-			//Name: name,
+			// Name: name,
 			Namespace: as.Namespace,
 			Labels:    labels,
 		},
@@ -247,8 +249,8 @@ func genRcSpec(image string,
 	replica int32,
 	ipp apiv1.PullPolicy,
 	on int,
-	as manager.ActionSpec) *apiv1.ReplicationController {
-
+	as manager.ActionSpec,
+) *apiv1.ReplicationController {
 	labels := map[string]string{
 		"app":   manager.AppName,
 		"type":  rcType,
@@ -261,7 +263,7 @@ func genRcSpec(image string,
 
 	podSpec := apiv1.PodTemplateSpec{
 		ObjectMeta: metav1.ObjectMeta{
-			//Name: name,
+			// Name: name,
 			Namespace: as.Namespace,
 			Labels:    labels,
 		},

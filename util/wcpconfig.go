@@ -17,8 +17,8 @@ limitations under the License.
 package util
 
 import (
-	"k-bench/infrastructure/vmware"
-	"k-bench/perf_util"
+	"github.com/edgelesssys/k-bench/infrastructure/vmware"
+	"github.com/edgelesssys/k-bench/perf_util"
 )
 
 type CreateSpec struct {

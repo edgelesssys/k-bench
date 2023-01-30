@@ -19,14 +19,15 @@ package manager
 import (
 	"sort"
 	"strconv"
+
 	//"strings"
 	"fmt"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/edgelesssys/k-bench/perf_util"
 	log "github.com/sirupsen/logrus"
-	"k-bench/perf_util"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -115,7 +116,6 @@ func (mgr *DeploymentManager) Init(
 	mgr.podMgr = pm
 
 	sharedClient, err := kubernetes.NewForConfig(kubeConfig)
-
 	if err != nil {
 		panic(err)
 	}
@@ -148,7 +148,6 @@ func (mgr *DeploymentManager) Init(
  * This function implements the CREATE action.
  */
 func (mgr *DeploymentManager) Create(spec interface{}) error {
-
 	switch s := spec.(type) {
 	default:
 		log.Errorf("Invalid spec type %T for Deployment create action.", s)
@@ -202,7 +201,6 @@ func (mgr *DeploymentManager) Create(spec interface{}) error {
  * This function implements the LIST action.
  */
 func (mgr *DeploymentManager) List(n interface{}) error {
-
 	switch s := n.(type) {
 	default:
 		log.Errorf("Invalid spec type %T for Deployment list action.", s)
@@ -237,7 +235,6 @@ func (mgr *DeploymentManager) List(n interface{}) error {
  * This function implements the GET action.
  */
 func (mgr *DeploymentManager) Get(n interface{}) error {
-
 	switch s := n.(type) {
 	default:
 		log.Errorf("Invalid spec type %T for Deployment get action.", s)
@@ -272,7 +269,6 @@ func (mgr *DeploymentManager) Get(n interface{}) error {
  * This function implements the UPDATE action.
  */
 func (mgr *DeploymentManager) Update(n interface{}) error {
-
 	switch s := n.(type) {
 	default:
 		log.Errorf("Invalid spec type %T for Deployment update action.", s)
@@ -320,7 +316,6 @@ func (mgr *DeploymentManager) Update(n interface{}) error {
  * This function implements the SCALE action.
  */
 func (mgr *DeploymentManager) Scale(n interface{}) error {
-
 	switch s := n.(type) {
 	default:
 		log.Errorf("Invalid spec type %T for Deployment scale action.", s)
@@ -392,7 +387,6 @@ func (mgr *DeploymentManager) Delete(n interface{}) error {
 		}.AsSelector().String()
 		podOptions := metav1.ListOptions{FieldSelector: selector}
 		pods, err := mgr.clientsets[cid].CoreV1().Pods(ns).List(podOptions)
-
 		if err != nil {
 			return err
 		}
@@ -448,15 +442,15 @@ func (mgr *DeploymentManager) Delete(n interface{}) error {
  * all the resources that are created by the deployment manager.
  */
 func (mgr *DeploymentManager) DeleteAll() error {
-
 	if len(mgr.depNs) > 0 {
 		log.Infof("Deleting all deployments created by the deployment manager...")
-		for name, _ := range mgr.depNs {
+		for name := range mgr.depNs {
 			// Just use tid 0 so that the first client is used to delete all deployments
 			mgr.Delete(ActionSpec{
 				Name:      name,
 				Tid:       0,
-				Namespace: mgr.depNs[name]})
+				Namespace: mgr.depNs[name],
+			})
 		}
 		mgr.depNs = make(map[string]string, 0)
 	} else {
@@ -468,7 +462,7 @@ func (mgr *DeploymentManager) DeleteAll() error {
 	}
 
 	// Delete other non default namespaces
-	for ns, _ := range mgr.nsSet {
+	for ns := range mgr.nsSet {
 		if ns != apiv1.NamespaceDefault {
 			mgr.client.CoreV1().Namespaces().Delete(ns, nil)
 		}
@@ -498,7 +492,7 @@ func (mgr *DeploymentManager) LogStats() {
 		"-----------------------------")
 	log.Infof("%-50v %-10v %-10v %-10v %-10v", " ", "median", "min", "max", "99%")
 
-	for m, _ := range mgr.apiTimes {
+	for m := range mgr.apiTimes {
 		sort.Slice(mgr.apiTimes[m],
 			func(i, j int) bool { return mgr.apiTimes[m][i] < mgr.apiTimes[m][j] })
 		mid := float32(mgr.apiTimes[m][len(mgr.apiTimes[m])/2]) / float32(time.Millisecond)
@@ -518,20 +512,28 @@ func (mgr *DeploymentManager) GetResourceName(opNum int, tid int) string {
 func (mgr *DeploymentManager) SendMetricToWavefront(now time.Time, wfTags []perf_util.WavefrontTag, wavefrontPathDir string, prefix string) {
 	mgr.podMgr.SendMetricToWavefront(now, wfTags, wavefrontPathDir, "deployment.")
 	var points []perf_util.WavefrontDataPoint
-	for m, _ := range mgr.apiTimes {
+	for m := range mgr.apiTimes {
 		mid := float32(mgr.apiTimes[m][len(mgr.apiTimes[m])/2]) / float32(time.Millisecond)
 		min := float32(mgr.apiTimes[m][0]) / float32(time.Millisecond)
 		max := float32(mgr.apiTimes[m][len(mgr.apiTimes[m])-1]) / float32(time.Millisecond)
 		p99 := float32(mgr.apiTimes[m][len(mgr.apiTimes[m])-1-len(mgr.apiTimes[m])/100]) /
 			float32(time.Millisecond)
-		points = append(points, perf_util.WavefrontDataPoint{"deployment.apicall." + m + ".median.latency",
-			mid, now, mgr.source, wfTags})
-		points = append(points, perf_util.WavefrontDataPoint{"deployment.apicall." + m + ".min.latency",
-			min, now, mgr.source, wfTags})
-		points = append(points, perf_util.WavefrontDataPoint{"deployment.apicall." + m + ".max.latency",
-			max, now, mgr.source, wfTags})
-		points = append(points, perf_util.WavefrontDataPoint{"deployment.apicall." + m + ".p99.latency",
-			p99, now, mgr.source, wfTags})
+		points = append(points, perf_util.WavefrontDataPoint{
+			"deployment.apicall." + m + ".median.latency",
+			mid, now, mgr.source, wfTags,
+		})
+		points = append(points, perf_util.WavefrontDataPoint{
+			"deployment.apicall." + m + ".min.latency",
+			min, now, mgr.source, wfTags,
+		})
+		points = append(points, perf_util.WavefrontDataPoint{
+			"deployment.apicall." + m + ".max.latency",
+			max, now, mgr.source, wfTags,
+		})
+		points = append(points, perf_util.WavefrontDataPoint{
+			"deployment.apicall." + m + ".p99.latency",
+			p99, now, mgr.source, wfTags,
+		})
 
 	}
 	var metricLines []string
